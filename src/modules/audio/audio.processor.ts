@@ -1,0 +1,16 @@
+import { Job } from 'bullmq';
+import { Logger } from '@nestjs/common';
+import { Process } from '@nestjs/bullmq';
+import { Processor } from '@nestjs/bullmq';
+
+@Processor('audio')
+export class AudioProcessor {
+  private readonly logger = new Logger(AudioProcessor.name);
+
+  @Process('transcode')
+  handleTranscode(job: Job) {
+    this.logger.debug('Start transcoding...');
+    this.logger.debug(job.data);
+    this.logger.debug('Transcoding completed');
+  }
+}
