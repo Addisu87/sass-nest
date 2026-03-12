@@ -6,7 +6,7 @@ import { CatsService } from 'src/modules/cats/cats.service';
 
 describe('Cats', () => {
   let app: INestApplication;
-  let catsService = { findAll: () => ['test'] };
+  const catsService = { findAll: () => ['test'] };
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({

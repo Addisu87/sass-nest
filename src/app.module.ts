@@ -3,15 +3,15 @@ import { CatsModule } from './modules/cats/cats.module';
 import { logger } from './modules/cats/logger.middleware';
 import { CatsController } from './modules/cats/cats.controller';
 import { AppService } from './app.service';
-import { ConfigModule } from './modules/config/config.module';
+import { ConfigModule } from './config/config.module';
 import { AppController } from './app.controller';
-import configuration from './modules/config/configuration';
-import databaseConfig from './modules/config/database.config';
+import configuration from './config/configuration';
+import databaseConfig from './config/database.config';
 import Joi, { options } from 'joi';
-import { validate } from './modules/config/env.validation';
+import { validate } from './config/env.validation';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { UserSchema } from './modules/users/schema/user.schema';
-import { ConfigService } from './modules/config/config.service';
+import { UserSchema } from './core/users/schema/users.schema';
+import { ConfigService } from './config/config.service';
 import { DataSource } from 'typeorm';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Cat, CatSchema } from './modules/cats/schemas/cat.schema';
@@ -24,6 +24,7 @@ import {
   SchemaDefinitionProperty,
   connection,
 } from 'mongoose';
+import { ThrottlerModule } from '@nestjs/throttler';
 // import { RolesGuard } from './cats/roles.guard';
 // import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
@@ -32,10 +33,16 @@ import { KeyvRedis } from 'keyv/redis';
 import { Keyv } from 'keyv';
 import * as CacheableMemory from 'cacheable';
 import { ScheduleModule } from '@nestjs/schedule';
-import { TasksModule } from './modules/tasks/tasks.module';
+import { TasksModule } from './commands/tasks/tasks.module';
 import { BullModule } from '@nestjs/bullmq';
 import { join } from 'node:path';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { OrdersModule } from './modules/orders/orders.module';
+import { MulterModule } from '@nestjs/platform-express';
+import { CoreModule } from './core/core.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { UsersModule } from './core/users/users.module';
+import { throttle } from 'rxjs';
 
 // import { DevConfigService } from './modules/config/dev-config.service';
 // import { ProdConfigService } from './modules/config/prod-config.service';
@@ -51,6 +58,10 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 @Module({
   // imports: [ConfigModule.register({ folder: './config' }), CatsModule],
   imports: [
+    AuthModule,
+    UsersModule,
+    CatsModule,
+    CoreModule,
     MongooseModule.forRoot(
       process.env.MONGODB_URI || 'mongodb://localhost/nest',
       {
@@ -65,7 +76,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
         },
       },
     ),
-    CatsModule,
+
     CacheModule.register({
       ttl: 5, // seconds
       max: 100, // maximum number of items in cache
@@ -95,7 +106,25 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
       }),
     }),
 
+    // Event-driven architecture
     EventEmitterModule.forRoot(),
+    OrdersModule,
+
+    // upload files
+    MulterModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        dest: configService.get('MULTER_DEST') || './uploads',
+      }),
+      inject: [ConfigService],
+    }),
+
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60,
+        limit: 5,
+      },
+    ]),
 
     // CacheModule.registerAsync({
     //   useFactory: async () => {

@@ -1,13 +1,13 @@
 import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 
-
 @Processor('audio')
 export class AudioConsumer extends WorkerHost {
   @OnWorkerEvent('active')
   onActive(job: Job) {
     console.log(
-      `Processing job ${job.id} of type ${job.name} with data ${job.data}....`)
+      `Processing job ${job.id} of type ${job.name} with data ${job.data}....`,
+    );
   }
   async process(job: Job<any, any, string>): Promise<any> {
     switch (job.name) {
@@ -17,11 +17,13 @@ export class AudioConsumer extends WorkerHost {
           await docSometing(job.data);
           progress += 1;
           await job.Process(progress);
+        }
+        return {};
       }
-      return {};
+      case 'concatenate': {
+        await doSomeLogic2();
+        break;
+      }
     }
-    case 'concatenate': {
-      await doSomeLogic2();
-      break;
   }
 }

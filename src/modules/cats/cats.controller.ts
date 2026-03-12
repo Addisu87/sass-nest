@@ -13,6 +13,7 @@ import {
   UseInterceptors,
   Query,
   ParseBoolPipe,
+  Session,
 } from '@nestjs/common';
 import { CatsService } from './cats.service';
 import { CreateCatDto } from './dto/create-cat.dto';
@@ -23,8 +24,17 @@ import { createCatSchema } from './cat-validation';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Cat } from './interfaces/cat.interface';
 import { UpdateCatDto } from './dto/update-cat.dto';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { Role } from 'src/common/enum/role.enum';
 // import { User } from '../../common/decorators/user.decorator';
 
+@ApiBearerAuth()
+@ApiTags('cats')
 @Controller('cats')
 // @UseInterceptors(new LoggingInterceptor())
 // @UseGuards(new RolesGuard())
@@ -32,20 +42,28 @@ export class CatsController {
   constructor(private readonly catsService: CatsService) {}
 
   @Post()
-  @Roles('admin')
-  // @Roles(['admin'])
+  @ApiOperation({ summary: 'Create cat' })
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
+  @Roles(Role.Admin)
   @UseFilters(new HttpExceptionFilter())
   @UsePipes(new ZodValidationPipe(createCatSchema))
-  async create(@Body() createCatDto: CreateCatDto) {
+  async create(@Body() createCatDto: CreateCatDto): Promise<Cat> {
     return this.catsService.create(createCatDto);
   }
 
   @Get()
-  async findAll(): Promise<Cat[]> {
+  async findAll(@Session() session: Record<string, any>): Promise<Cat[]> {
+    const visits = session.get('visits');
+    session.set('visits', visits ? visits + 1 : 1);
     return await this.catsService.findAll();
   }
 
   @Get(':id')
+  @ApiResponse({
+    status: 200,
+    description: 'The found record',
+    type: Cat,
+  })
   async findOne(
     @Param('id', ParseIntPipe) id: string,
     @Query('sort', ParseBoolPipe) sort: boolean,

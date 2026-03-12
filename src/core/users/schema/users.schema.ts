@@ -12,6 +12,9 @@ export class User {
   @Column()
   lastName: string;
 
+  @Column()
+  username: string;
+
   @Virtual({
     get: function (this: User) {
       return `${this.firstName} ${this.lastName}`;
@@ -30,4 +33,6 @@ export class User {
 
   @OneToMany((type) => Post, (post) => post.user)
   posts: Post[];
+  userId: any;
+  role: any;
 }

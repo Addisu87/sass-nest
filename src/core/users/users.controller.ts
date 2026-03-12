@@ -1,7 +1,11 @@
-import { Body, Delete, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UsersService } from './user.services';
+import { Public } from 'src/common/decorators/public.decorator';
+import { UsersService } from './users.service';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 
+@SkipThrottle()
+@Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
   @Post()
@@ -14,6 +18,8 @@ export class UsersController {
     return this.usersService.findOne(+id);
   }
 
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @Public()
   @Get()
   findAll() {
     return this.usersService.findAll();
