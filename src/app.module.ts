@@ -10,7 +10,7 @@ import databaseConfig from './config/database.config';
 import Joi, { options } from 'joi';
 import { validate } from './config/env.validation';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { UserSchema } from './core/users/schema/users.schema';
+import { UserSchema } from './modules/users/schema/users.schema';
 import { ConfigService } from './config/config.service';
 import { DataSource } from 'typeorm';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -41,8 +41,9 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { MulterModule } from '@nestjs/platform-express';
 import { CoreModule } from './core/core.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { UsersModule } from './core/users/users.module';
+import { UsersModule } from './modules/users/users.module';
 import { throttle } from 'rxjs';
+import { EventsModule } from './events/events.module';
 
 // import { DevConfigService } from './modules/config/dev-config.service';
 // import { ProdConfigService } from './modules/config/prod-config.service';
@@ -62,6 +63,7 @@ import { throttle } from 'rxjs';
     UsersModule,
     CatsModule,
     CoreModule,
+    EventsModule,
     MongooseModule.forRoot(
       process.env.MONGODB_URI || 'mongodb://localhost/nest',
       {

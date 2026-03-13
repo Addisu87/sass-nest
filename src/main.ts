@@ -14,6 +14,7 @@ import {
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { doubleCsrf, DoubleCsrfConfigOptions } from 'csrf-csrf';
+import { RedisIoAdapter } from './common/adapters/redis-io.adapter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -83,6 +84,9 @@ async function bootstrap() {
     doubleCsrfProtection,
   } = doubleCsrf(doubleCsrfOptions);
   app.use(doubleCsrfProtection);
+
+  const redisIoAdapter = new RedisIoAdapter(app);
+  await redisIoAdapter.connectToRedis();
 
   await app.listen(process.env.PORT ?? 3000);
   console.log(`Application is running on: ${await app.getUrl()}`);

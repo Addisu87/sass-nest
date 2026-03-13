@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Action } from '../casl.actons';
-import { User } from 'src/core/users/entities/user.entity';
-import { Article } from 'src/core/users/entities/article.entity';
+import { User } from 'src/modules/users/entities/user.entity';
+import { Article } from 'src/modules/users/entities/article.entity';
 
 type Subjects = InferSubjects<typeof Article | typeof User> | 'all';
 

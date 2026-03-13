@@ -6,7 +6,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
-import { PasswordService } from 'src/common/password.service';
+import { PasswordService } from 'src/modules/auth/ strategies/password.service';
 import { JwtStrategy } from './ strategies/jwt.strategy';
 import { ConfigService } from 'src/config/config.service';
 import { ThrottlerGuard } from '@nestjs/throttler';
