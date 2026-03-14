@@ -6,10 +6,10 @@ import {
   Logger,
   Optional,
 } from '@nestjs/common';
-import { Cat } from './schemas/cat.schema';
-import { InjectModel } from '@nestjs/mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Cat } from './entities/cat.entity';
 import { CreateCatDto } from './dto/create-cat.dto';
-import { Model } from 'mongoose';
 import { UpdateCatDto } from './dto/update-cat.dto';
 import { AxiosError } from 'axios';
 import { catchError, firstValueFrom } from 'rxjs';
@@ -18,20 +18,21 @@ import { catchError, firstValueFrom } from 'rxjs';
 export class CatsService {
   private readonly logger = new Logger(CatsService.name);
   constructor(
-    @InjectModel(Cat.name) private readonly catModel: Model<Cat>,
+    @InjectRepository(Cat) private readonly catRepository: Repository<Cat>,
     @Optional() private readonly httpService?: HttpService,
   ) {}
 
   async create(createCatDto: CreateCatDto): Promise<Cat> {
     this.logger.log(`Creating a new cat: ${createCatDto.name}`);
-    const createdCat = await this.catModel.create(createCatDto);
-    this.logger.log(`Cat created with ID: ${String(createdCat._id)}`);
+    const cat = this.catRepository.create(createCatDto);
+    const createdCat = await this.catRepository.save(cat);
+    this.logger.log(`Cat created with ID: ${createdCat.id}`);
     return createdCat;
   }
 
   async findAll(): Promise<Cat[]> {
     this.logger.log('Finding all cats');
-    return this.catModel.find().exec();
+    return this.catRepository.find();
   }
 
   /**
@@ -68,22 +69,22 @@ export class CatsService {
 
   async findOne(id: string): Promise<Cat | null> {
     this.logger.log(`Finding cat with ID: ${id}`);
-    return this.catModel.findOne({ _id: id }).exec();
+    return this.catRepository.findOne({ where: { id: Number(id) } });
   }
 
   async update(id: string, updateCatDto: UpdateCatDto): Promise<Cat | null> {
     this.logger.log(`Updating cat with ID: ${id}`);
-    return this.catModel
-      .findByIdAndUpdate({ _id: id }, updateCatDto, { new: true })
-      .exec();
+    await this.catRepository.update(Number(id), updateCatDto);
+    return this.findOne(id);
   }
 
   async delete(id: string): Promise<Cat | null> {
     this.logger.log(`Deleting cat with ID: ${id}`);
-    const deletedCat = await this.catModel
-      .findByIdAndDelete({ _id: id })
-      .exec();
+    const cat = await this.findOne(id);
+    if (cat) {
+      await this.catRepository.remove(cat);
+    }
     this.logger.log(`Cat deleted with ID: ${id}`);
-    return deletedCat;
+    return cat;
   }
 }

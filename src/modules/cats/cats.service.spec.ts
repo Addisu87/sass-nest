@@ -1,35 +1,36 @@
-import { getModelToken } from '@nestjs/mongoose';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { Test, TestingModule } from '@nestjs/testing';
-import { Model, Types } from 'mongoose';
+import { Repository } from 'typeorm';
 import { CatsService } from './cats.service';
 import { CreateCatDto } from './dto/create-cat.dto';
-import { Cat } from './schemas/cat.schema';
+import { Cat } from './entities/cat.entity';
 
-const catModelMock = {
+const catRepositoryMock = {
   create: jest.fn(),
+  save: jest.fn(),
   find: jest.fn(),
   findOne: jest.fn(),
-  findByIdAndUpdate: jest.fn(),
-  findByIdAndDelete: jest.fn(),
+  update: jest.fn(),
+  remove: jest.fn(),
 };
 
 describe('CatsService', () => {
   let service: CatsService;
-  let model: jest.Mocked<Model<Cat>>;
+  let repository: jest.Mocked<Partial<Repository<Cat>>>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CatsService,
         {
-          provide: getModelToken('Cat'),
-          useValue: catModelMock,
+          provide: getRepositoryToken(Cat),
+          useValue: catRepositoryMock,
         },
       ],
     }).compile();
 
     service = module.get(CatsService);
-    model = module.get(getModelToken('Cat'));
+    repository = module.get(getRepositoryToken(Cat));
   });
 
   it('should be defined', () => {
@@ -60,91 +61,54 @@ describe('CatsService', () => {
   describe('findAll', () => {
     it('should return all cats', async () => {
       const mockedCats = [
-        {
-          name: 'Cat #1',
-          breed: 'Breed #1',
-          age: 4,
-        },
-        {
-          name: 'Cat #2',
-          breed: 'Breed #2',
-          age: 2,
-        },
+        { id: 1, name: 'Cat #1', breed: 'Breed #1', age: 4 },
+        { id: 2, name: 'Cat #2', breed: 'Breed #2', age: 2 },
       ];
-      model.find.mockReturnValueOnce({
-        exec: jest.fn().mockResolvedValueOnce(mockedCats),
-      } as any);
+      (repository.find as jest.Mock).mockResolvedValueOnce(mockedCats);
 
       const result = await service.findAll();
 
       expect(result).toEqual(mockedCats);
-      expect(model.find).toHaveBeenCalled();
+      expect(repository.find).toHaveBeenCalled();
     });
   });
 
   describe('findOne', () => {
     it('should return one cat', async () => {
-      const mockedCat = {
-        name: 'Cat #1',
-        breed: 'Breed #1',
-        age: 4,
-      };
-      model.findOne.mockReturnValueOnce({
-        exec: jest.fn().mockResolvedValueOnce(mockedCat),
-      } as any);
+      const mockedCat = { id: 1, name: 'Cat #1', breed: 'Breed #1', age: 4 };
+      (repository.findOne as jest.Mock).mockResolvedValueOnce(mockedCat);
 
-      const id = new Types.ObjectId().toString();
-      const result = await service.findOne(id);
+      const result = await service.findOne('1');
 
       expect(result).toEqual(mockedCat);
-      expect(model.findOne).toHaveBeenCalledWith({ _id: id });
+      expect(repository.findOne).toHaveBeenCalledWith({ where: { id: 1 } });
     });
   });
 
   describe('update', () => {
     it('should update a cat', async () => {
-      const mockedCat = {
-        name: 'Cat #1',
-        breed: 'Breed #1',
-        age: 4,
-      };
-      model.findByIdAndUpdate.mockReturnValueOnce({
-        exec: jest.fn().mockResolvedValueOnce(mockedCat),
-      } as any);
+      const mockedCat = { id: 1, name: 'Cat #1', breed: 'Breed #1', age: 4 };
+      const updateCatDto = { name: 'Cat #1', breed: 'Breed #1', age: 4 };
+      (repository.update as jest.Mock).mockResolvedValueOnce(undefined);
+      (repository.findOne as jest.Mock).mockResolvedValueOnce(mockedCat);
 
-      const id = new Types.ObjectId().toString();
-      const updateCatDto = {
-        name: 'Cat #1',
-        breed: 'Breed #1',
-        age: 4,
-      };
-      const result = await service.update(id, updateCatDto);
+      const result = await service.update('1', updateCatDto);
 
       expect(result).toEqual(mockedCat);
-      expect(model.findByIdAndUpdate).toHaveBeenCalledWith(
-        { _id: id },
-        updateCatDto,
-        { new: true },
-      );
+      expect(repository.update).toHaveBeenCalledWith(1, updateCatDto);
     });
   });
 
   describe('delete', () => {
     it('should delete a cat', async () => {
-      const mockedCat = {
-        name: 'Cat #1',
-        breed: 'Breed #1',
-        age: 4,
-      };
-      model.findByIdAndDelete.mockReturnValueOnce({
-        exec: jest.fn().mockResolvedValueOnce(mockedCat),
-      } as any);
+      const mockedCat = { id: 1, name: 'Cat #1', breed: 'Breed #1', age: 4 };
+      (repository.findOne as jest.Mock).mockResolvedValueOnce(mockedCat);
+      (repository.remove as jest.Mock).mockResolvedValueOnce(mockedCat);
 
-      const id = new Types.ObjectId().toString();
-      const result = await service.delete(id);
+      const result = await service.delete('1');
 
       expect(result).toEqual(mockedCat);
-      expect(model.findByIdAndDelete).toHaveBeenCalledWith({ _id: id });
+      expect(repository.findOne).toHaveBeenCalledWith({ where: { id: 1 } });
     });
   });
 });

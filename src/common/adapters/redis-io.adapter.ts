@@ -6,9 +6,13 @@ import { createClient } from 'redis';
 export class RedisIoAdapter extends IoAdapter {
   private adapterConstructor: ReturnType<typeof createAdapter>;
 
+  constructor(private readonly app: any, private readonly redisUrl = 'redis://localhost:6379') {
+    super(app);
+  }
+
   async connectToRedis(): Promise<void> {
     const pubClient = createClient({
-      url: `redis://localhost:6379`,
+      url: this.redisUrl,
       clientInfoTag: this.getClientInfoTag(),
     });
     const subClient = pubClient.duplicate();

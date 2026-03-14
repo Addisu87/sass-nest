@@ -37,7 +37,7 @@ export class AuthService {
   async signIn(
     username: string,
     password: string,
-  ): Promise<{ access_token: string }> {
+  ): Promise<{ access_token: string; refresh_token?: string }> {
     const user = await this.usersService.findOne(username);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -54,8 +54,8 @@ export class AuthService {
     const payload = { sub: user.id, username: user.username, role: user.role };
     const accessToken = await this.jwtService.signAsync(payload);
     const refreshToken = await this.jwtService.signAsync(payload, {
-      secret: process.env.JWT_REFRESH_SECRET,
-      expiresIn: process.env.JWT_REFRESH_EXPIRATION?.toString(),
+      secret: process.env.JWT_REFRESH_SECRET ?? 'refresh-secret',
+      expiresIn: process.env.JWT_REFRESH_EXPIRATION ? Number(process.env.JWT_REFRESH_EXPIRATION) : '7d',
     });
 
     // Here the JWT secret key that's used for signing the payload
@@ -68,10 +68,11 @@ export class AuthService {
 
   async updateRefreshToken(userId: number, token: string) {
     const user = await this.usersService.findById(userId);
+    if (!user) throw new UnauthorizedException();
 
     const isValid = await this.passwordService.comparePassword(
       token,
-      user.refreshToken,
+      user.refreshToken ?? '',
     );
 
     if (!isValid) throw new UnauthorizedException();
@@ -114,7 +115,7 @@ export class AuthService {
   async verifyEmail(token: string) {
     const payload = await this.jwtService.verifyAsync(token);
 
-    await this.usersService.update(payload.sub, {
+    await this.usersService.update(String(payload.sub), {
       isEmailVerified: true,
     });
 

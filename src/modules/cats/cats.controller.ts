@@ -14,6 +14,8 @@ import {
   Query,
   ParseBoolPipe,
   Session,
+  Delete,
+  Patch,
 } from '@nestjs/common';
 import { CatsService } from './cats.service';
 import { CreateCatDto } from './dto/create-cat.dto';
@@ -22,19 +24,11 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { createCatSchema } from './cat-validation';
 // import { RolesGuard } from './roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { Cat } from './interfaces/cat.interface';
+import { Cat } from './entities/cat.entity';
 import { UpdateCatDto } from './dto/update-cat.dto';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
 import { Role } from 'src/common/enum/role.enum';
 // import { User } from '../../common/decorators/user.decorator';
 
-@ApiBearerAuth()
-@ApiTags('cats')
 @Controller('cats')
 // @UseInterceptors(new LoggingInterceptor())
 // @UseGuards(new RolesGuard())
@@ -42,8 +36,6 @@ export class CatsController {
   constructor(private readonly catsService: CatsService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create cat' })
-  @ApiResponse({ status: 403, description: 'Forbidden.' })
   @Roles(Role.Admin)
   @UseFilters(new HttpExceptionFilter())
   @UsePipes(new ZodValidationPipe(createCatSchema))
@@ -59,11 +51,6 @@ export class CatsController {
   }
 
   @Get(':id')
-  @ApiResponse({
-    status: 200,
-    description: 'The found record',
-    type: Cat,
-  })
   async findOne(
     @Param('id', ParseIntPipe) id: string,
     @Query('sort', ParseBoolPipe) sort: boolean,
@@ -71,7 +58,7 @@ export class CatsController {
     return this.catsService.findOne(id);
   }
 
-  @Post(':id')
+  @Patch(':id')
   async update(
     @Param('id', ParseIntPipe) id: string,
     @Body() updateCatDto: UpdateCatDto,
@@ -79,7 +66,7 @@ export class CatsController {
     return this.catsService.update(id, updateCatDto);
   }
 
-  @Post(':id/delete')
+  @Delete(':id')
   async delete(@Param('id', ParseIntPipe) id: string): Promise<Cat | null> {
     return this.catsService.delete(id);
   }

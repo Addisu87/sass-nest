@@ -8,6 +8,7 @@ import { SkipThrottle, Throttle } from '@nestjs/throttler';
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
   @Post()
   async create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
@@ -15,18 +16,18 @@ export class UsersController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.usersService.findOne(+id);
+    return this.usersService.findOne(id);
   }
 
+  @Get()
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Public()
-  @Get()
   findAll() {
     return this.usersService.findAll();
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+    return this.usersService.delete(id);
   }
 }

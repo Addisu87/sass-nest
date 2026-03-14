@@ -1,14 +1,11 @@
 import { ArgumentsHost, Catch, UseFilters } from '@nestjs/common';
-import {
-  BaseWsExceptionFilter,
-  SubscribeMessage,
-  WsResponse,
-} from '@nestjs/websockets';
+import { BaseWsExceptionFilter, SubscribeMessage } from '@nestjs/websockets';
+import type { WsResponse } from '@nestjs/websockets';
 
 @UseFilters(new BaseWsExceptionFilter())
 export class EventExceptionFilter {
   @SubscribeMessage('events')
-  OnEvent(client: any, data: any): WsResponse<any> {
+  OnEvent(client: unknown, data: unknown): WsResponse<unknown> {
     const event = 'events';
     return { event, data };
   }

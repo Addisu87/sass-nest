@@ -8,7 +8,7 @@ import { AuthGuard } from './auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { PasswordService } from 'src/modules/auth/ strategies/password.service';
 import { JwtStrategy } from './ strategies/jwt.strategy';
-import { ConfigService } from 'src/config/config.service';
+import { ConfigService } from '@nestjs/config';
 import { ThrottlerGuard } from '@nestjs/throttler';
 
 @Module({
@@ -17,11 +17,9 @@ import { ThrottlerGuard } from '@nestjs/throttler';
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get('JWT_ACCESS_SECRET'),
+        secret: config.get('JWT_ACCESS_SECRET') ?? 'jwt-secret',
         signOptions: {
-          expiresIn:
-            Number(config.get('JWT_ACCESS_EXPIRATION')) ||
-            config.get('JWT_ACCESS_EXPIRATION'),
+          expiresIn: config.get('JWT_ACCESS_EXPIRATION') ? Number(config.get('JWT_ACCESS_EXPIRATION')) : '1h',
         },
       }),
     }),

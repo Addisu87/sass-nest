@@ -1,5 +1,6 @@
 import { UsePipes, ValidationPipe } from '@nestjs/common';
-import { SubscribeMessage, WsException, WsResponse } from '@nestjs/websockets';
+import { SubscribeMessage, WsException } from '@nestjs/websockets';
+import type { WsResponse } from '@nestjs/websockets';
 
 @UsePipes(
   new ValidationPipe({
@@ -8,7 +9,7 @@ import { SubscribeMessage, WsException, WsResponse } from '@nestjs/websockets';
 )
 export class EventPipe {
   @SubscribeMessage('events')
-  handleEvent(client: ClientRequest, data: unknown): WsResponse<unknown> {
+  handleEvent(client: unknown, data: unknown): WsResponse<unknown> {
     const event = 'events';
     return { event, data };
   }

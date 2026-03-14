@@ -24,8 +24,8 @@ async function bootstrap() {
       logger: new Logger(),
       // logger: new WinstonLoggerService(),
       forceCloseConnections: true,
+      snapshot: true,
     },
-    { cors: true },
   );
 
   const { httpAdapter } = app.get(HttpAdapterHost);
@@ -62,31 +62,50 @@ async function bootstrap() {
     templates: join(__dirname, '..', 'views'),
   });
 
-  const options = new DocumentBuilder()
+  const config = new DocumentBuilder()
     .setTitle('Cats example')
     .setDescription('The cats API description')
     .setVersion('1.0')
-    .addTag('cats')
+    .addBearerAuth()
     .build();
 
-  const documentFactory = () => SwaggerModule.createDocument(app, options);
-  SwaggerModule.setup('api', app, documentFactory, {
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document, {
     jsonDocumentUrl: 'swagger/json',
   });
 
   app.use(helmet());
   app.enableCors();
 
+  const doubleCsrfOptions: DoubleCsrfConfigOptions = {
+    getSecret: () => process.env.CSRF_SECRET ?? 'csrf-secret',
+    getSessionIdentifier: (req) => (req.session as any)?.id ?? 'default',
+  };
+
   const {
-    invalidCsrfTokenError,
-    generateToken,
-    validateRequest,
+    invalidCsrfTokenError: _invalidCsrfTokenError,
+    generateCsrfToken: _generateCsrfToken,
+    validateRequest: _validateRequest,
     doubleCsrfProtection,
   } = doubleCsrf(doubleCsrfOptions);
   app.use(doubleCsrfProtection);
 
-  const redisIoAdapter = new RedisIoAdapter(app);
-  await redisIoAdapter.connectToRedis();
+  if (process.env.ENABLE_REDIS_IO === 'true') {
+    try {
+      const redisUrl =
+        process.env.REDIS_URL ||
+        `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || '6379'}`;
+      const redisIoAdapter = new RedisIoAdapter(app, redisUrl);
+      await redisIoAdapter.connectToRedis();
+      app.useWebSocketAdapter(redisIoAdapter);
+      console.log('Socket.IO using Redis adapter');
+    } catch (err) {
+      console.warn(
+        'Redis unavailable for Socket.IO, using default adapter:',
+        (err as Error).message,
+      );
+    }
+  }
 
   await app.listen(process.env.PORT ?? 3000);
   console.log(`Application is running on: ${await app.getUrl()}`);

@@ -1,3 +1,10 @@
+import {
+  AbilityBuilder,
+  createMongoAbility,
+  ExtractSubjectType,
+  InferSubjects,
+  MongoAbility,
+} from '@casl/ability';
 import { Injectable } from '@nestjs/common';
 import { Action } from '../casl.actons';
 import { User } from 'src/modules/users/entities/user.entity';

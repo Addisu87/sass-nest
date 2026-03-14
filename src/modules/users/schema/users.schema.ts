@@ -1,28 +1,23 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { Virtual } from '@nestjs/mongoose';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ default: '' })
   firstName: string;
 
-  @Column()
+  @Column({ default: '' })
   lastName: string;
 
   @Column()
   username: string;
 
-  @Virtual({
-    get: function (this: User) {
-      return `${this.firstName} ${this.lastName}`;
-    },
-  })
+  @Column({ default: '' })
   fullName: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, default: '' })
   email: string;
 
   @Column()
@@ -31,8 +26,11 @@ export class User {
   @Column({ default: true })
   isActive: boolean;
 
-  @OneToMany((type) => Post, (post) => post.user)
-  posts: Post[];
-  userId: any;
-  role: any;
+  @Column({ type: 'varchar', nullable: true })
+  refreshToken: string | null;
+
+  @Column({ type: 'boolean', nullable: true, default: false })
+  isEmailVerified: boolean;
+
+  role?: unknown;
 }

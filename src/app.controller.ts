@@ -11,6 +11,7 @@ import {
   ParseFilePipe,
   Body,
   FileTypeValidator,
+  MaxFileSizeValidator,
   ParseFilePipeBuilder,
   HttpStatus,
   UploadedFiles,
@@ -51,7 +52,7 @@ export class AppController {
     return this.appService.getHello();
   }
 
-  @Get()
+  @Get('index')
   index(@Res() response: Response) {
     response
       .type('text/html')
@@ -65,8 +66,8 @@ export class AppController {
     );
   }
 
-  @Get()
-  findAll() {
+  @Get('list')
+  async findAll() {
     // For demonstration purposes, we will simulate a delay
     // to show that the cache is working as expected.
     await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -111,10 +112,9 @@ export class AppController {
     @UploadedFile(
       new ParseFilePipe({
         validators: [
-          new MaxFileSizeValidatory({ maxSize: 1000 }),
+          new MaxFileSizeValidator({ maxSize: 1000 }),
           new FileTypeValidator({ fileType: 'image/jpeg' }),
         ],
-      }).build({
         fileIsRequired: false,
       }),
     )

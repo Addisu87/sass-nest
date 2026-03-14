@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { User } from './schema/users.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -8,71 +8,62 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
-  findById(userId: number) {
-    throw new Error('Method not implemented.');
+  async findById(userId: number): Promise<User | undefined> {
+    return (await this.userRepository.findOne({ where: { id: userId } })) ?? undefined;
   }
-  findByEmail(email: string) {
-    throw new Error('Method not implemented.');
+  async findByEmail(email: string): Promise<User | undefined> {
+    return (await this.userRepository.findOne({ where: { email } })) ?? undefined;
   }
-  updatePassword(sub: any, hashedPassword: string) {
-    throw new Error('Method not implemented.');
+  updatePassword(sub: number, hashedPassword: string) {
+    return this.userRepository.update(sub, { password: hashedPassword });
   }
-  updateRefreshToken(userId: number, arg1: null) {
-    throw new Error('Method not implemented.');
+  async updateRefreshToken(userId: number, token: string | null) {
+    return this.userRepository.update(userId, { refreshToken: token });
   }
   private readonly saltRounds = 10;
-  constructor(
-    @InjectModel(User.name) private readonly UserModel: Model<User>,
-  ) {}
 
-  private readonly users = [
-    {
-      userId: 1,
-      username: 'john',
-      password: 'changeme',
-    },
-    {
-      userId: 2,
-      username: 'maria',
-      password: 'guess',
-    },
-  ];
+  constructor(
+    @InjectRepository(User) private readonly userRepository: Repository<User>,
+  ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
     const hashedPassword = await bcrypt.hash(
       createUserDto.password,
       this.saltRounds,
     );
-    const createdUser: User = await this.UserModel.create({
+    const user = this.userRepository.create({
       ...createUserDto,
       password: hashedPassword,
+      firstName: createUserDto.username ?? '',
+      lastName: '',
+      fullName: createUserDto.username ?? '',
     });
-    // save user to DB
-    return createdUser;
+    return this.userRepository.save(user);
   }
 
   async findAll(): Promise<User[]> {
-    return this.UserModel.find().exec();
+    return this.userRepository.find();
   }
 
-  // async findOne(id: string): Promise<User | null> {
-  //   return this.UserModel.findById({ _id: id }).exec();
-  // }
-
-  async findOne(username: string): Promise<User | undefined> {
-    return this.users.find((user) => user.username === username);
+  async findOne(usernameOrId: string): Promise<User | undefined> {
+    const parsedId = Number.parseInt(usernameOrId, 10);
+    if (!Number.isNaN(parsedId)) {
+      return (await this.userRepository.findOne({ where: { id: parsedId } })) ?? undefined;
+    }
+    return (await this.userRepository.findOne({ where: { username: usernameOrId } })) ?? undefined;
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User | null> {
-    return this.UserModel.findByIdAndUpdate({ _id: id }, updateUserDto, {
-      new: true,
-    }).exec();
+    const { id: _, ...dto } = updateUserDto;
+    await this.userRepository.update(Number(id), dto);
+    return this.userRepository.findOne({ where: { id: Number(id) } }) ?? null;
   }
 
   async delete(id: string): Promise<User | null> {
-    const deletedUser = await this.UserModel.findByIdAndDelete({
-      _id: id,
-    }).exec();
-    return deletedUser;
+    const user = await this.userRepository.findOne({ where: { id: Number(id) } });
+    if (user) {
+      await this.userRepository.remove(user);
+    }
+    return user;
   }
 }

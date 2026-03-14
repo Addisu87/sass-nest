@@ -23,9 +23,3 @@ export class NotificationService {
     console.log('Handling notification timeout');
   }
 }
-
-// Access this job
-const job = this.schedulerRegistry.getCronJob('notifications');
-job.stop(); // To stop the cron job
-job.start(); // To start the cron job again
-console.log(job.lastDate());
