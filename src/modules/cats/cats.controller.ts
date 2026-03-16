@@ -22,12 +22,10 @@ import { CreateCatDto } from './dto/create-cat.dto';
 import { HttpExceptionFilter } from '../../common/filters/http-exception.filter';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { createCatSchema } from './cat-validation';
-// import { RolesGuard } from './roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Cat } from './entities/cat.entity';
 import { UpdateCatDto } from './dto/update-cat.dto';
 import { Role } from 'src/common/enum/role.enum';
-// import { User } from '../../common/decorators/user.decorator';
 
 @Controller('cats')
 // @UseInterceptors(new LoggingInterceptor())

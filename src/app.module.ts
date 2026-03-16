@@ -28,9 +28,9 @@ import { EventsModule } from './events/events.module';
     }),
     AuthModule,
     UsersModule,
+    CatsModule,
     CoreModule,
     EventsModule,
-    CatsModule,
 
     CacheModule.register({
       ttl: Number(process.env.CACHE_TTL) || 5000,
