@@ -22,10 +22,10 @@ import { CreateCatDto } from './dto/create-cat.dto';
 import { HttpExceptionFilter } from '../../common/filters/http-exception.filter';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { createCatSchema } from './cat-validation';
-import { Roles } from '../../common/decorators/roles.decorator';
 import { Cat } from './entities/cat.entity';
 import { UpdateCatDto } from './dto/update-cat.dto';
-import { Role } from 'src/common/enum/role.enum';
+import { ApiCreatedResponse } from '@nestjs/swagger';
+import { Public } from 'src/common/decorators/public.decorator';
 
 @Controller('cats')
 // @UseInterceptors(new LoggingInterceptor())
@@ -34,13 +34,17 @@ export class CatsController {
   constructor(private readonly catsService: CatsService) {}
 
   @Post()
-  @Roles(Role.Admin)
+  @ApiCreatedResponse({
+    description: 'The record has been successfully created.',
+    type: Cat,
+  })
   @UseFilters(new HttpExceptionFilter())
   @UsePipes(new ZodValidationPipe(createCatSchema))
   async create(@Body() createCatDto: CreateCatDto): Promise<Cat> {
     return this.catsService.create(createCatDto);
   }
 
+  @Public()
   @Get()
   async findAll(@Session() session: Record<string, any>): Promise<Cat[]> {
     const visits = session.get('visits');

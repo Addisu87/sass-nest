@@ -1,28 +1,25 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from 'src/modules/users/users.service';
-import { PasswordService } from 'src/modules/auth/ strategies/password.service';
+import { PasswordService } from './strategies/password.service';
+import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
 export class AuthService {
-  refreshToken(token: string) {
-    throw new Error('Method not implemented.');
-  }
-  private readonly saltRounds = 10;
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly passwordService: PasswordService,
   ) {}
 
-  async register(username: string, password: string) {
-    const hashedPassword = await this.passwordService.hashPassword(password);
-
+  async register(dto: RegisterDto) {
     const user = await this.usersService.create({
-      username,
-      password: hashedPassword,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      email: dto.email,
+      password: dto.password,
       isEmailVerified: false,
-      email: '',
+      roles: [],
     });
 
     const verifyToken = await this.jwtService.signAsync({
@@ -35,10 +32,10 @@ export class AuthService {
   }
 
   async signIn(
-    username: string,
+    email: string,
     password: string,
   ): Promise<{ access_token: string; refresh_token?: string }> {
-    const user = await this.usersService.findOne(username);
+    const user = await this.usersService.findByEmail(email);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -51,41 +48,67 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const payload = { sub: user.id, username: user.username, role: user.role };
+    const payload = { sub: user.id, email: user.email };
     const accessToken = await this.jwtService.signAsync(payload);
     const refreshToken = await this.jwtService.signAsync(payload, {
       secret: process.env.JWT_REFRESH_SECRET ?? 'refresh-secret',
-      expiresIn: process.env.JWT_REFRESH_EXPIRATION ? Number(process.env.JWT_REFRESH_EXPIRATION) : '7d',
+      expiresIn: process.env.JWT_REFRESH_EXPIRATION ?? '7d',
     });
 
-    // Here the JWT secret key that's used for signing the payload
-    // is the key that was passed in the JwtModule
+    await this.usersService.updateRefreshToken(
+      user.id,
+      await this.passwordService.hashPassword(refreshToken),
+    );
+
     return {
       access_token: accessToken,
       refresh_token: refreshToken,
     };
   }
 
-  async updateRefreshToken(userId: number, token: string) {
-    const user = await this.usersService.findById(userId);
-    if (!user) throw new UnauthorizedException();
+  async refreshToken(
+    refreshToken: string,
+  ): Promise<{ access_token: string; refresh_token: string }> {
+    let payload: { sub: number; email: string };
+    try {
+      payload = await this.jwtService.verifyAsync(refreshToken, {
+        secret: process.env.JWT_REFRESH_SECRET ?? 'refresh-secret',
+      });
+    } catch {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
 
-    const isValid = await this.passwordService.comparePassword(
-      token,
-      user.refreshToken ?? '',
+    const user = await this.usersService.findById(payload.sub);
+    if (!user || !user.refreshToken) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const matches = await this.passwordService.comparePassword(
+      refreshToken,
+      user.refreshToken,
+    );
+    if (!matches) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const newAccessToken = await this.jwtService.signAsync({
+      sub: user.id,
+      email: user.email,
+    });
+    const newRefreshToken = await this.jwtService.signAsync(
+      { sub: user.id, email: user.email },
+      {
+        secret: process.env.JWT_REFRESH_SECRET ?? 'refresh-secret',
+        expiresIn: process.env.JWT_REFRESH_EXPIRATION ?? '7d',
+      },
     );
 
-    if (!isValid) throw new UnauthorizedException();
+    await this.usersService.updateRefreshToken(
+      user.id,
+      await this.passwordService.hashPassword(newRefreshToken),
+    );
 
-    const payload = {
-      sub: user.id,
-      username: user.username,
-      role: user.role,
-    };
-
-    return {
-      access_token: await this.jwtService.signAsync(payload),
-    };
+    return { access_token: newAccessToken, refresh_token: newRefreshToken };
   }
 
   async sendResetLink(email: string) {

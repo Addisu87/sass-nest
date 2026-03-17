@@ -1,36 +1,40 @@
-import { HttpAdapterHost, LazyModuleLoader, NestFactory } from '@nestjs/core';
+import {
+  HttpAdapterHost,
+  LazyModuleLoader,
+  NestFactory,
+  Reflector,
+} from '@nestjs/core';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { ValidationPipe } from './common/pipes/validation.pipe';
-import { Logger, VersioningType } from '@nestjs/common';
+import {
+  ClassSerializerInterceptor,
+  Logger,
+  VersioningType,
+} from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import session from 'express-session';
 import { join } from 'node:path';
-import {
-  NestFastifyApplication,
-  FastifyAdapter,
-} from '@nestjs/platform-fastify';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { doubleCsrf, DoubleCsrfConfigOptions } from 'csrf-csrf';
 import { RedisIoAdapter } from './common/adapters/redis-io.adapter';
+import type { Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestFastifyApplication>(
-    AppModule,
-    new FastifyAdapter(),
-    {
-      logger: new Logger(),
-      // logger: new WinstonLoggerService(),
-      forceCloseConnections: true,
-      snapshot: true,
-    },
-  );
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: new Logger(),
+    // logger: new WinstonLoggerService(),
+    forceCloseConnections: true,
+    snapshot: true,
+  });
 
   const { httpAdapter } = app.get(HttpAdapterHost);
   app.useGlobalPipes(new ValidationPipe());
   app.useGlobalFilters(new AllExceptionsFilter(httpAdapter));
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   const lazyModuleLoader = app.get(LazyModuleLoader);
   console.log(lazyModuleLoader);
 
@@ -40,6 +44,12 @@ async function bootstrap() {
     type: VersioningType.URI,
     defaultVersion: '1',
   });
+
+  // Convenience redirect: the API is URI-versioned, so `/` would otherwise 404.
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .get('/', (_req: Request, res: Response) => res.redirect('/api'));
 
   app.use(cookieParser());
   app.use(compression());
@@ -51,18 +61,15 @@ async function bootstrap() {
     }),
   );
 
-  app.useStaticAssets({
-    root: join(__dirname, '..', 'public'),
-    prefix: '/public/',
-  });
-  app.setViewEngine({
-    engine: {
-      handlebars: require('handlebars'),
-    },
-    templates: join(__dirname, '..', 'views'),
-  });
+  app.useStaticAssets(join(__dirname, '..', 'public'), { prefix: '/public/' });
+  app.setBaseViewsDir(join(__dirname, '..', 'views'));
+  app.setViewEngine('hbs');
 
   const config = new DocumentBuilder()
+    .addGlobalResponse({
+      status: 500,
+      description: 'Internal server error',
+    })
     .setTitle('Cats example')
     .setDescription('The cats API description')
     .setVersion('1.0')
@@ -79,7 +86,7 @@ async function bootstrap() {
 
   const doubleCsrfOptions: DoubleCsrfConfigOptions = {
     getSecret: () => process.env.CSRF_SECRET ?? 'csrf-secret',
-    getSessionIdentifier: (req) => (req.session as any)?.id ?? 'default',
+    getSessionIdentifier: (req) => (req.sessionID as string) ?? 'default',
   };
 
   const {
@@ -88,7 +95,19 @@ async function bootstrap() {
     validateRequest: _validateRequest,
     doubleCsrfProtection,
   } = doubleCsrf(doubleCsrfOptions);
-  app.use(doubleCsrfProtection);
+  if (process.env.ENABLE_CSRF === 'true') {
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      const accept = req.headers.accept ?? '';
+      const contentType = req.headers['content-type'] ?? '';
+      const isJson =
+        accept.includes('application/json') ||
+        contentType.includes('application/json');
+      const hasBearer = Boolean(req.headers.authorization);
+
+      if (isJson || hasBearer) return next();
+      return doubleCsrfProtection(req, res, next);
+    });
+  }
 
   if (process.env.ENABLE_REDIS_IO === 'true') {
     try {
