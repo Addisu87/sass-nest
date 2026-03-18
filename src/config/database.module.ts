@@ -10,7 +10,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       useFactory: (configService: ConfigService) => {
         const synchronize =
           configService.get<boolean>('database.synchronize') ??
-          (configService.get<string>('app.env') ?? 'development') !== 'production';
+          (configService.get<string>('app.env') ?? 'development') !==
+            'production';
 
         const url = configService.get<string>('database.url');
         if (url) {

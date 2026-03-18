@@ -13,6 +13,7 @@ export const normalizeNodeEnv = (
 ): NormalizedNodeEnv => {
   const normalized = (value ?? '').trim().toLowerCase();
   if (normalized === 'production' || normalized === 'prod') return 'production';
-  if (normalized === 'development' || normalized === 'dev') return 'development';
+  if (normalized === 'development' || normalized === 'dev')
+    return 'development';
   return 'development';
 };

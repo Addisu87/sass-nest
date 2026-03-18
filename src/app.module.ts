@@ -23,6 +23,7 @@ import { EventsModule } from './events/events.module';
 import { PhotoModule } from './modules/photo/photo.module';
 import { ConfigService } from '@nestjs/config';
 import { normalizeNodeEnv } from './config/env.utils';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { normalizeNodeEnv } from './config/env.utils';
     CoreModule,
     EventsModule,
     PhotoModule,
+    HealthModule,
 
     CacheModule.registerAsync({
       inject: [ConfigService],

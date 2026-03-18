@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { type StringValue } from 'ms';
 import { UsersService } from 'src/modules/users/users.service';
 import { PasswordService } from './strategies/password.service';
 import { RegisterDto } from './dto/register.dto';
@@ -52,7 +53,7 @@ export class AuthService {
     const accessToken = await this.jwtService.signAsync(payload);
     const refreshToken = await this.jwtService.signAsync(payload, {
       secret: process.env.JWT_REFRESH_SECRET ?? 'refresh-secret',
-      expiresIn: process.env.JWT_REFRESH_EXPIRATION ?? '7d',
+      expiresIn: (process.env.JWT_REFRESH_EXPIRATION ?? '7d') as StringValue,
     });
 
     await this.usersService.updateRefreshToken(
@@ -99,7 +100,7 @@ export class AuthService {
       { sub: user.id, email: user.email },
       {
         secret: process.env.JWT_REFRESH_SECRET ?? 'refresh-secret',
-        expiresIn: process.env.JWT_REFRESH_EXPIRATION ?? '7d',
+        expiresIn: (process.env.JWT_REFRESH_EXPIRATION ?? '7d') as StringValue,
       },
     );
 

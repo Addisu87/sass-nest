@@ -35,15 +35,6 @@ import { CreatePhotoDto } from './modules/photo/dto/create-photo.dto';
 export class AppController {
   constructor() {}
 
-  @Get('health')
-  health() {
-    return {
-      status: 'ok',
-      uptime: process.uptime(),
-      timestamp: new Date().toISOString(),
-    };
-  }
-
   @Get('index')
   index(@Res() response: Response) {
     response
