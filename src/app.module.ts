@@ -5,7 +5,8 @@ import { CatsController } from './modules/cats/cats.controller';
 import { ConfigModule as NestConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { ApiConfigService, AppService } from './app.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { DatabaseModule } from './config/database.module';
+import { configuration } from './config/configuration';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -19,22 +20,35 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { DevtoolsModule } from '@nestjs/devtools-integration';
 import { EventsModule } from './events/events.module';
+import { PhotoModule } from './modules/photo/photo.module';
+import { ConfigService } from '@nestjs/config';
+import { normalizeNodeEnv } from './config/env.utils';
 
 @Module({
   imports: [
     NestConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath:
+        normalizeNodeEnv(process.env.NODE_ENV) === 'production'
+          ? ['.env.production', '.env']
+          : ['.env', '.env.production'],
+      load: configuration,
+      cache: true,
     }),
+    DatabaseModule,
     AuthModule,
     UsersModule,
     CatsModule,
     CoreModule,
     EventsModule,
+    PhotoModule,
 
-    CacheModule.register({
-      ttl: Number(process.env.CACHE_TTL) || 5000,
-      max: 100,
+    CacheModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        ttl: configService.get<number>('cache.ttl') ?? 5000,
+        max: 100,
+      }),
     }),
 
     // Task scheduling
@@ -43,19 +57,21 @@ import { EventsModule } from './events/events.module';
 
     // Queues and background jobs (Redis)
     BullModule.forRootAsync({
-      useFactory: () => ({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
         connection: {
-          host: process.env.REDIS_HOST || 'localhost',
-          port: Number.parseInt(process.env.REDIS_PORT || '6379'),
+          host: configService.get<string>('redis.host') ?? 'localhost',
+          port: configService.get<number>('redis.port') ?? 6379,
         },
       }),
     }),
     BullModule.registerQueueAsync({
       name: 'audio',
-      useFactory: () => ({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
         connection: {
-          host: process.env.REDIS_HOST || 'localhost',
-          port: Number.parseInt(process.env.REDIS_PORT || '6379'),
+          host: configService.get<string>('redis.host') ?? 'localhost',
+          port: configService.get<number>('redis.port') ?? 6379,
         },
       }),
     }),
@@ -65,8 +81,11 @@ import { EventsModule } from './events/events.module';
     OrdersModule,
 
     // upload files
-    MulterModule.register({
-      dest: process.env.MULTER_DEST || './uploads',
+    MulterModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        dest: configService.get<string>('multer.dest') ?? './uploads',
+      }),
     }),
 
     ThrottlerModule.forRoot([
@@ -79,17 +98,6 @@ import { EventsModule } from './events/events.module';
     // Dev tools
     DevtoolsModule.register({
       http: process.env.NODE_ENV !== 'production',
-    }),
-
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432', 10),
-      username: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASS || 'password',
-      database: process.env.DB_NAME || 'db',
-      autoLoadEntities: true,
-      synchronize: true,
     }),
   ],
   controllers: [AppController],

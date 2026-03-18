@@ -10,7 +10,7 @@ export class ApiConfigService {
   }
 
   get jwtSecret(): string {
-    return this.configService.get('JWT_SECRET') ?? '';
+    return this.configService.get('JWT_ACCESS_SECRET') ?? this.configService.get('jwt.accessSecret') ?? '';
   }
 }
 
@@ -20,9 +20,5 @@ export class AppService {
     if (apiConfigService.isAuthEnabled) {
       console.log('Authentication is enabled');
     }
-  }
-
-  getHello(): string {
-    return 'Hello World!';
   }
 }

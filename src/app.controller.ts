@@ -1,7 +1,6 @@
 import {
   Controller,
   Get,
-  Inject,
   Injectable,
   Post,
   UploadedFile,
@@ -15,41 +14,34 @@ import {
   ParseFilePipeBuilder,
   HttpStatus,
   UploadedFiles,
-  Render,
   Sse,
   MessageEvent,
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { AppService } from './app.service';
-import { Cache, CACHE_MANAGER, CacheInterceptor } from '@nestjs/cache-manager';
+import { CacheInterceptor } from '@nestjs/cache-manager';
 import {
   FileFieldsInterceptor,
   FileInterceptor,
 } from '@nestjs/platform-express';
-import { SamplePhotoDto } from './modules/photo/dto/sample-photo.dto';
 import { readFileSync } from 'node:fs';
 import { join } from 'path';
 import { Observable } from 'rxjs';
 import { interval } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { CreatePhotoDto } from './modules/photo/dto/create-photo.dto';
 
 @Controller()
-@UseInterceptors(CacheInterceptor)
 export class AppController {
-  constructor(private readonly appService: AppService) {}
-  // constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {}
+  constructor() {}
 
-  // const value = await this.cacheManager.get('key')
-  // await this.cacheManager.set('key', 'value', { ttl: 5000 });
-  // await this.cacheManager.del('key');
-  // await this.cacheManager.reset();
-  // await this.cacheManager.clear();
-
-  @Get()
-  @Render('index.hbs')
-  getHello(): string {
-    return this.appService.getHello();
+  @Get('health')
+  health() {
+    return {
+      status: 'ok',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+    };
   }
 
   @Get('index')
@@ -67,6 +59,7 @@ export class AppController {
   }
 
   @Get('list')
+  @UseInterceptors(CacheInterceptor)
   async findAll() {
     // For demonstration purposes, we will simulate a delay
     // to show that the cache is working as expected.
@@ -95,7 +88,7 @@ export class AppController {
   @UseInterceptors(FileInterceptor('file'))
   @Post('file')
   uploadSingleFile(
-    @Body() body: SamplePhotoDto,
+    @Body() body: CreatePhotoDto,
     @UploadedFile() file: Express.Multer.File,
   ) {
     return {
@@ -108,7 +101,7 @@ export class AppController {
   @UseInterceptors(FileInterceptor('file'))
   @Post('file/pass-validation')
   uploadFileAndPassValidation(
-    @Body() body: SamplePhotoDto,
+    @Body() body: CreatePhotoDto,
     @UploadedFile(
       new ParseFilePipe({
         validators: [
@@ -129,7 +122,7 @@ export class AppController {
   @UseInterceptors(FileInterceptor('file'))
   @Post('file/fail-validation')
   uploadFileAndFailValidation(
-    @Body() body: SamplePhotoDto,
+    @Body() body: CreatePhotoDto,
 
     @UploadedFile(
       new ParseFilePipeBuilder()

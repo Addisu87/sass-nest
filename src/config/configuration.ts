@@ -1,10 +1,16 @@
-export default () => ({
-  port: parseInt(process.env.PORT ?? '3000', 10) || 3000,
-  database: {
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT ?? '5432', 10) || 5432,
-    username: process.env.DB_USER || 'user',
-    password: process.env.DB_PASS|| 'password',
-    name: process.env.DB_NAME || 'db',
-  },
-});
+import { appConfig } from './app.config';
+import { cacheConfig } from './cache.config';
+import { databaseConfig } from './database.config';
+import { jwtConfig } from './jwt.config';
+import { multerConfig } from './multer.config';
+import { redisConfig } from './redis.config';
+
+export const configuration = [
+  appConfig,
+  databaseConfig,
+  redisConfig,
+  cacheConfig,
+  multerConfig,
+  jwtConfig,
+] as const;
+
